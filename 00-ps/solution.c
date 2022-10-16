@@ -13,7 +13,8 @@ const char* exe_path = "/exe";
 const char* cmdline_path = "/cmdline";
 const char* environ_path = "/environ";
 
-const int MAX_ARG_STRLEN = 131072;
+const int ARG_MAX = 16384;
+const int MAX_ARG_STRLEN = 16384;
 const int FILE_PATH_MAX_LENGTH = 4096;
 const int EXE_COMMAND_MAX_LENGTH = 4096;
 
@@ -27,10 +28,10 @@ void ps(void)
 
 	char file_path[FILE_PATH_MAX_LENGTH];
 	char exe[EXE_COMMAND_MAX_LENGTH];
-	const int arg_max = sysconf(_SC_ARG_MAX);
-	char** argv = (char**) malloc(arg_max * sizeof(char*));
-    char** envp = (char**) malloc(arg_max * sizeof(char*));
-    for (int i = 0; i < arg_max; ++i) {
+    size_t arg_size = MAX_ARG_STRLEN;
+	char** argv = (char**) malloc(ARG_MAX * sizeof(char*));
+    char** envp = (char**) malloc(ARG_MAX * sizeof(char*));
+    for (int i = 0; i < ARG_MAX; ++i) {
         argv[i] = calloc(MAX_ARG_STRLEN, sizeof(char));
         envp[i] = calloc(MAX_ARG_STRLEN, sizeof(char));
     }
@@ -60,8 +61,8 @@ void ps(void)
 			report_error(file_path, errno);
 			continue;
 		}
-		for (int i = 0; i < arg_max; ++i) {
-			if (getdelim(argv + i * sizeof(char*), MAX_ARG_STRLEN * sizeof(char), '\0', argv_file) < 0 || argv[i][0] == '\0') {
+		for (int i = 0; i < ARG_MAX; ++i) {
+			if (getdelim(argv + i * sizeof(char*), &arg_size, '\0', argv_file) < 0 || argv[i][0] == '\0') {
 				argv[i] = NULL;
 				break;
 			}
@@ -74,8 +75,8 @@ void ps(void)
 			report_error(file_path, errno);
 			continue;
 		}
-		for (int i = 0; i < arg_max; ++i) {
-			if (getdelim(envp + i * sizeof(char*), MAX_ARG_STRLEN * sizeof(char), '\0', envp_file) < 0 || envp[i][0] == '\0') {
+		for (int i = 0; i < ARG_MAX; ++i) {
+			if (getdelim(envp + i * sizeof(char*), &arg_size, '\0', envp_file) < 0 || envp[i][0] == '\0') {
 				envp[i] = NULL;
 				break;
 			}
@@ -87,7 +88,7 @@ void ps(void)
 
 	closedir(proc_dir);
 
-	for (int i = 0; i < arg_max; ++i) {
+	for (int i = 0; i < ARG_MAX; ++i) {
         free(argv[i]);
         free(envp[i]);
     }
