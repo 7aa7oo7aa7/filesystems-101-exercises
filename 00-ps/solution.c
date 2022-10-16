@@ -32,8 +32,8 @@ void ps(void)
 	char** argv = (char**) malloc(ARG_MAX * sizeof(char*));
     char** envp = (char**) malloc(ARG_MAX * sizeof(char*));
     for (int i = 0; i < ARG_MAX; ++i) {
-        argv[i] = (char*) calloc(MAX_ARG_STRLEN, sizeof(char));
-        envp[i] = (char*) calloc(MAX_ARG_STRLEN, sizeof(char));
+        argv[i] = (char*) malloc(MAX_ARG_STRLEN * sizeof(char));
+        envp[i] = (char*) malloc(MAX_ARG_STRLEN * sizeof(char));
     }
 
 	for (struct dirent* proc_dirent = readdir(proc_dir); proc_dirent != NULL; proc_dirent = readdir(proc_dir)) {
