@@ -28,7 +28,6 @@ void ps(void)
 
 	char file_path[FILE_PATH_MAX_LENGTH];
 	char* exe = (char*) calloc(EXE_COMMAND_MAX_LENGTH, sizeof(char));
-    size_t arg_size = MAX_ARG_STRLEN;
 	char** argv = (char**) malloc(ARG_MAX * sizeof(char*));
     char** envp = (char**) malloc(ARG_MAX * sizeof(char*));
     for (int i = 0; i < ARG_MAX; ++i) {
@@ -61,11 +60,14 @@ void ps(void)
 			report_error(file_path, errno);
 			continue;
 		}
+		char** cur_argv = (char**) malloc(ARG_MAX * sizeof(char*));
 		for (int i = 0; i < ARG_MAX; ++i) {
-			arg_size = MAX_ARG_STRLEN;
+			size_t arg_size = MAX_ARG_STRLEN;
 			if (getdelim(&argv[i], &arg_size, '\0', argv_file) < 0 || argv[i][0] == '\0') {
-				argv[i] = NULL;
+				cur_argv[i] = NULL;
 				break;
+			} else {
+				cur_argv[i] = argv[i];
 			}
 		}
 		fclose(argv_file);
@@ -73,19 +75,25 @@ void ps(void)
 		strcpy(current_path, environ_path);
 		FILE* envp_file = fopen(file_path, "r");
 		if (envp_file == NULL) {
+			free(cur_argv);
 			report_error(file_path, errno);
 			continue;
 		}
+		char** cur_envp = (char**) malloc(ARG_MAX * sizeof(char*));
 		for (int i = 0; i < ARG_MAX; ++i) {
-			arg_size = MAX_ARG_STRLEN;
+			size_t arg_size = MAX_ARG_STRLEN;
 			if (getdelim(&envp[i], &arg_size, '\0', envp_file) < 0 || envp[i][0] == '\0') {
-				envp[i] = NULL;
+				cur_envp[i] = NULL;
 				break;
+			} else {
+				cur_envp[i] = envp[i];
 			}
 		}
 		fclose(envp_file);
 
-		report_process(pid, exe, argv, envp);
+		report_process(pid, exe, cur_argv, cur_envp);
+		free(cur_argv);
+		free(cur_envp);
 	}
 
 	closedir(proc_dir);
