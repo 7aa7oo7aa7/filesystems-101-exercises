@@ -46,7 +46,6 @@ void lsof(void)
 			continue;
 		}
 
-		int num_files = 0;
 		for (struct dirent* files_dirent = readdir(files_dir); files_dirent != NULL; files_dirent = readdir(files_dir)) {
 			if (strcmp(files_dirent->d_name, ".") == 0 || strcmp(files_dirent->d_name, "..") == 0) {
 				continue;
