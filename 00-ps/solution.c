@@ -28,8 +28,8 @@ void ps(void)
 	char file_path[FILE_PATH_MAX_LENGTH];
 	char exe[EXE_COMMAND_MAX_LENGTH];
 	const int arg_max = sysconf(_SC_ARG_MAX);
-	char** argv = malloc(arg_max * sizeof(char*));
-    char** envp = malloc(arg_max * sizeof(char*));
+	char** argv = (char**) malloc(arg_max * sizeof(char*));
+    char** envp = (char**) malloc(arg_max * sizeof(char*));
     for (int i = 0; i < arg_max; ++i) {
         argv[i] = calloc(MAX_ARG_STRLEN, sizeof(char));
         envp[i] = calloc(MAX_ARG_STRLEN, sizeof(char));
@@ -61,7 +61,7 @@ void ps(void)
 			continue;
 		}
 		for (int i = 0; i < arg_max; ++i) {
-			if (fscanf(argv_file, "%s", argv[i]) == EOF) {
+			if (getdelim(argv + i * sizeof(char*), MAX_ARG_STRLEN * sizeof(char), '\0', argv_file) < 0 || argv[i][0] == '\0') {
 				argv[i] = NULL;
 				break;
 			}
@@ -75,7 +75,7 @@ void ps(void)
 			continue;
 		}
 		for (int i = 0; i < arg_max; ++i) {
-			if (fscanf(envp_file, "%s", envp[i]) == EOF || envp[i][0] == '\0') {
+			if (getdelim(envp + i * sizeof(char*), MAX_ARG_STRLEN * sizeof(char), '\0', envp_file) < 0 || envp[i][0] == '\0') {
 				envp[i] = NULL;
 				break;
 			}
