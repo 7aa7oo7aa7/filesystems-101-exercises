@@ -27,13 +27,13 @@ void ps(void)
 	}
 
 	char file_path[FILE_PATH_MAX_LENGTH];
-	char exe[EXE_COMMAND_MAX_LENGTH];
+	char* exe = (char*) calloc(EXE_COMMAND_MAX_LENGTH, sizeof(char));
     size_t arg_size = MAX_ARG_STRLEN;
 	char** argv = (char**) malloc(ARG_MAX * sizeof(char*));
     char** envp = (char**) malloc(ARG_MAX * sizeof(char*));
     for (int i = 0; i < ARG_MAX; ++i) {
-        argv[i] = calloc(MAX_ARG_STRLEN, sizeof(char));
-        envp[i] = calloc(MAX_ARG_STRLEN, sizeof(char));
+        argv[i] = (char*) calloc(MAX_ARG_STRLEN, sizeof(char));
+        envp[i] = (char*) calloc(MAX_ARG_STRLEN, sizeof(char));
     }
 
 	for (struct dirent* proc_dirent = readdir(proc_dir); proc_dirent != NULL; proc_dirent = readdir(proc_dir)) {
@@ -94,4 +94,5 @@ void ps(void)
     }
     free(argv);
     free(envp);
+	free(exe);
 }
