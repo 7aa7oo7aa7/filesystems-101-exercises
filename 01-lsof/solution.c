@@ -27,8 +27,6 @@ void lsof(void)
 	char* lsof_path = (char*) calloc(FILE_PATH_MAX_LENGTH, sizeof(char));
 
 	for (struct dirent* proc_dirent = readdir(proc_dir); proc_dirent != NULL; proc_dirent = readdir(proc_dir)) {
-		memset((void*) lsof_path, '\0', FILE_PATH_MAX_LENGTH * sizeof(char));
-
 		char* endptr;
 		strtol(proc_dirent->d_name, &endptr, 10);
 		if (*endptr) {
@@ -51,6 +49,7 @@ void lsof(void)
 				continue;
 			}
 			strcpy(current_path + strlen(fd_path) * sizeof(char), files_dirent->d_name);
+			memset((void*) lsof_path, '\0', FILE_PATH_MAX_LENGTH * sizeof(char));
 			ssize_t link_length = readlink(file_path, lsof_path, FILE_PATH_MAX_LENGTH);
 			if (link_length == -1) {
 				report_error(file_path, errno);
