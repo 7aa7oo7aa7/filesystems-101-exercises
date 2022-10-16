@@ -40,36 +40,13 @@ void lsof(void)
 
 		strcpy(current_path, fd_path);
 		DIR* files_dir = opendir(file_path);
-		if (files_dir != NULL) {
-			for (struct dirent* files_dirent = readdir(files_dir); files_dirent != NULL; files_dirent = readdir(files_dir)) {
-				if (strcmp(files_dirent->d_name, ".") == 0 || strcmp(files_dirent->d_name, "..") == 0) {
-					continue;
-				}
-				strcpy(current_path + strlen(fd_path) * sizeof(char), files_dirent->d_name);
-				ssize_t link_length = readlink(file_path, lsof_path, FILE_PATH_MAX_LENGTH);
-				if (link_length < 0) {
-					report_error(file_path, errno);
-					continue;
-				}
-				report_file(lsof_path);
-			}
-			closedir(files_dir);
-		} else {
-			report_error(file_path, errno);
-		}
-
-		strcpy(current_path, map_files_path);
-		DIR* map_files_dir = opendir(file_path);
-		if (map_files_dir == NULL) {
+		if (files_dir == NULL) {
 			report_error(file_path, errno);
 			continue;
 		}
 
-		for (struct dirent* files_dirent = readdir(map_files_dir); files_dirent != NULL; files_dirent = readdir(map_files_dir)) {
-			if (strcmp(files_dirent->d_name, ".") == 0 || strcmp(files_dirent->d_name, "..") == 0) {
-				continue;
-			}
-			strcpy(current_path + strlen(map_files_path) * sizeof(char), files_dirent->d_name);
+		for (struct dirent* files_dirent = readdir(files_dir); files_dirent != NULL; files_dirent = readdir(files_dir)) {
+			strcpy(current_path + strlen(fd_path) * sizeof(char), files_dirent->d_name);
 			ssize_t link_length = readlink(file_path, lsof_path, FILE_PATH_MAX_LENGTH);
 			if (link_length < 0) {
 				report_error(file_path, errno);
@@ -78,7 +55,7 @@ void lsof(void)
 			report_file(lsof_path);
 		}
 
-		closedir(map_files_dir);
+		closedir(files_dir);
 	}
 
 	closedir(proc_dir);
