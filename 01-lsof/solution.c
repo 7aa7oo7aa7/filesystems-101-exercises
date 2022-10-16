@@ -10,7 +10,6 @@
 
 const char* proc_path = "/proc/";
 const char* fd_path = "/fd/";
-const char* map_files_path = "/map_files/";
 
 const int FILE_PATH_MAX_LENGTH = 8192;
 
@@ -25,9 +24,11 @@ void lsof(void)
 	char file_path[FILE_PATH_MAX_LENGTH];
 	strcpy(file_path, proc_path);
 
-	char* lsof_path = (char*) calloc(FILE_PATH_MAX_LENGTH, sizeof(char*));
+	char* lsof_path = (char*) calloc(FILE_PATH_MAX_LENGTH, sizeof(char));
 
 	for (struct dirent* proc_dirent = readdir(proc_dir); proc_dirent != NULL; proc_dirent = readdir(proc_dir)) {
+		memset((void*) lsof_path, '\0', FILE_PATH_MAX_LENGTH * sizeof(char));
+
 		char* endptr;
 		strtol(proc_dirent->d_name, &endptr, 10);
 		if (*endptr) {
@@ -44,11 +45,14 @@ void lsof(void)
 			report_error(file_path, errno);
 			continue;
 		}
-
+		
 		for (struct dirent* files_dirent = readdir(files_dir); files_dirent != NULL; files_dirent = readdir(files_dir)) {
+			if (strcmp(files_dirent->d_name, ".") == 0 || strcmp(files_dirent->d_name, "..") == 0) {
+				continue;
+			}
 			strcpy(current_path + strlen(fd_path) * sizeof(char), files_dirent->d_name);
 			ssize_t link_length = readlink(file_path, lsof_path, FILE_PATH_MAX_LENGTH);
-			if (link_length < 0) {
+			if (link_length == -1) {
 				report_error(file_path, errno);
 				continue;
 			}
