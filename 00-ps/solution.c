@@ -62,6 +62,7 @@ void ps(void)
 			continue;
 		}
 		for (int i = 0; i < ARG_MAX; ++i) {
+			arg_size = MAX_ARG_STRLEN;
 			if (getdelim(&argv[i], &arg_size, '\0', argv_file) < 0 || argv[i][0] == '\0') {
 				argv[i] = NULL;
 				break;
@@ -76,6 +77,7 @@ void ps(void)
 			continue;
 		}
 		for (int i = 0; i < ARG_MAX; ++i) {
+			arg_size = MAX_ARG_STRLEN;
 			if (getdelim(&envp[i], &arg_size, '\0', envp_file) < 0 || envp[i][0] == '\0') {
 				envp[i] = NULL;
 				break;
