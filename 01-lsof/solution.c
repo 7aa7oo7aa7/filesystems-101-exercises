@@ -12,7 +12,6 @@ const char* proc_path = "/proc/";
 const char* fd_path = "/fd/";
 const char* map_files_path = "/map_files/";
 
-const int MAX_FILES = 4096;
 const int FILE_PATH_MAX_LENGTH = 4096;
 
 void lsof(void)
@@ -26,11 +25,7 @@ void lsof(void)
 	char file_path[FILE_PATH_MAX_LENGTH];
 	strcpy(file_path, proc_path);
 
-	// paths to files
-	char** files = (char**) malloc(MAX_FILES * sizeof(char*));
-    for (int i = 0; i < MAX_FILES; ++i) {
-        files[i] = (char*) malloc(FILE_PATH_MAX_LENGTH * sizeof(char));
-    }
+	char* lsof_path = (char*) calloc(FILE_PATH_MAX_LENGTH, sizeof(char*));
 
 	for (struct dirent* proc_dirent = readdir(proc_dir); proc_dirent != NULL; proc_dirent = readdir(proc_dir)) {
 		char* endptr;
@@ -57,26 +52,17 @@ void lsof(void)
 				continue;
 			}
 			strcpy(current_path, files_dirent->d_name);
-			ssize_t link_length = readlink(file_path, files[num_files], FILE_PATH_MAX_LENGTH);
+			ssize_t link_length = readlink(file_path, lsof_path, FILE_PATH_MAX_LENGTH);
 			if (link_length < 0) {
 				report_error(file_path, errno);
 				continue;
-			} else {
-				++num_files;
 			}
-		}
-
-		for (int i = 0; i < num_files; ++i) {
-			report_file(files[i]);
+			report_file(lsof_path);
 		}
 
 		closedir(files_dir);
 	}
 
 	closedir(proc_dir);
-
-	for (int i = 0; i < MAX_FILES; ++i) {
-        free(files[i]);
-    }
-    free(files);
+    free(lsof_path);
 }
