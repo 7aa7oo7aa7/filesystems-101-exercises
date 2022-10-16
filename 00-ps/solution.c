@@ -13,7 +13,7 @@ const char* exe_path = "/exe";
 const char* cmdline_path = "/cmdline";
 const char* environ_path = "/environ";
 
-const int ARG_MAX = 16384;
+const int ARG_MAX = 4096;
 const int MAX_ARG_STRLEN = 16384;
 const int FILE_PATH_MAX_LENGTH = 4096;
 const int EXE_COMMAND_MAX_LENGTH = 4096;
@@ -27,6 +27,8 @@ void ps(void)
 	}
 
 	char file_path[FILE_PATH_MAX_LENGTH];
+	strcpy(file_path, proc_path);
+	
 	char* exe = (char*) calloc(EXE_COMMAND_MAX_LENGTH, sizeof(char));
 	char** argv = (char**) malloc(ARG_MAX * sizeof(char*));
     char** envp = (char**) malloc(ARG_MAX * sizeof(char*));
@@ -43,7 +45,6 @@ void ps(void)
 			continue;
 		}
 
-		strcpy(file_path, proc_path);
 		strcpy(file_path + strlen(proc_path) * sizeof(char), proc_dirent->d_name);
 		char* current_path = file_path + (strlen(proc_path) + strlen(proc_dirent->d_name)) * sizeof(char);
 
