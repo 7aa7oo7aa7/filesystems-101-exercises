@@ -57,10 +57,12 @@ void lsof(void)
 				continue;
 			}
 			strcpy(current_path, files_dirent->d_name);
-			ssize_t link_length = readlink(file_path, files[num_files++], FILE_PATH_MAX_LENGTH);
+			ssize_t link_length = readlink(file_path, files[num_files], FILE_PATH_MAX_LENGTH);
 			if (link_length < 0) {
 				report_error(file_path, errno);
 				continue;
+			} else {
+				++num_files;
 			}
 		}
 
