@@ -34,7 +34,7 @@ void lsof(void)
 
 	for (struct dirent* proc_dirent = readdir(proc_dir); proc_dirent != NULL; proc_dirent = readdir(proc_dir)) {
 		char* endptr;
-		pid_t pid = (pid_t) strtol(proc_dirent->d_name, &endptr, 10);
+		strtol(proc_dirent->d_name, &endptr, 10);
 		if (*endptr) {
 			// encountered a non-pid directory, skip it
 			continue;
