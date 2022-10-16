@@ -12,7 +12,7 @@ const char* proc_path = "/proc/";
 const char* fd_path = "/fd/";
 const char* map_files_path = "/map_files/";
 
-const int FILE_PATH_MAX_LENGTH = 4096;
+const int FILE_PATH_MAX_LENGTH = 8192;
 
 void lsof(void)
 {
@@ -53,7 +53,6 @@ void lsof(void)
 				}
 				report_file(lsof_path);
 			}
-
 			closedir(files_dir);
 		} else {
 			report_error(file_path, errno);
