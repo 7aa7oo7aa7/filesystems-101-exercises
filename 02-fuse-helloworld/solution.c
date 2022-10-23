@@ -108,16 +108,13 @@ static int hellofs_readdir(const char* path, void* buf,
 
 static int hellofs_write(const char* path, const char* buf, 
 	size_t size, off_t offset, struct fuse_file_info* fi) {
+	(void) path;
 	(void) buf;
 	(void) size;
 	(void) offset;
 	(void) fi;
 
-	if (is_hello_file(path)) {
-		return -EROFS;
-	}
-
-	return -ENOENT;
+	return -EROFS;
 }
 
 static const struct fuse_operations hellofs_ops = {
