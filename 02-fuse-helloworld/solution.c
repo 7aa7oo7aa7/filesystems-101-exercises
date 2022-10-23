@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 
-const size_t MAX_PID_LENGTH = 5;  // 32768
+const size_t MAX_PID_LENGTH = 5;  // max pid is 32768
 
 static bool is_root_dir(const char* path) {
 	return strcmp(path, "/") == 0;
@@ -114,6 +114,60 @@ static int hellofs_write(const char* path, const char* buf,
 	(void) offset;
 	(void) fi;
 
+	// no write to the FS
+	return -EROFS;
+}
+
+static int hellofs_mkdir(const char* path, mode_t mode) {
+	(void) path;
+	(void) mode;
+
+	// no write to the FS
+	return -EROFS;
+}
+
+static int hellofs_mknod(const char* path, mode_t mode, dev_t dev) {
+	(void) path;
+	(void) mode;
+	(void) dev;
+
+	// no write to the FS
+	return -EROFS;
+}
+
+static int hellofs_write_buf(const char* path, struct fuse_bufvec* buf, off_t offset, struct fuse_file_info* fi) {
+	(void) path;
+	(void) buf;
+	(void) offset;
+	(void) fi;
+
+	// no write to the FS
+	return -EROFS;
+}
+
+static int hellofs_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
+	(void) path;
+	(void) mode;
+	(void) fi;
+
+	// no write to the FS
+	return -EROFS;
+}
+
+static int hellofs_truncate(const char* path, off_t offset, struct fuse_file_info* fi) {
+	(void) path;
+	(void) offset;
+	(void) fi;
+
+	// no write to the FS
+	return -EROFS;
+}
+
+static int hellofs_symlink(const char* path, const char* link) {
+	(void) path;
+	(void) link;
+
+	// no write to the FS
 	return -EROFS;
 }
 
@@ -123,6 +177,12 @@ static const struct fuse_operations hellofs_ops = {
 	.read = hellofs_read,
 	.readdir = hellofs_readdir,
 	.write = hellofs_write,
+	.mkdir = hellofs_mkdir,
+	.mknod = hellofs_mknod,
+	.write_buf = hellofs_write_buf,
+	.create = hellofs_create,
+	.truncate = hellofs_truncate,
+	.symlink = hellofs_symlink
 };
 
 int helloworld(const char *mntp) {
