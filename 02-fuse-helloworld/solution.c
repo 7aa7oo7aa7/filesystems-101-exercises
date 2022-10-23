@@ -55,10 +55,9 @@ static int hellofs_getattr(const char* path,
 }
 
 static int hellofs_open(const char* path, struct fuse_file_info* fi) {
-	if (!is_hello_file(path)) {
-		return -ENOENT;
-	} else if ((fi->flags & O_ACCMODE) != O_RDONLY) {
-		return -EACCES;
+	if (!is_hello_file(path) || (fi->flags & O_ACCMODE) != O_RDONLY) {
+		// don't create file and don't write in the FSS
+		return -EROFS;
 	}
 	
 	return 0;
