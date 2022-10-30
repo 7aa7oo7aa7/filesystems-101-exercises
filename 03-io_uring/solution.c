@@ -111,17 +111,20 @@ int copy(int in, int out) {
     while (bytes_to_read > 0 || bytes_to_write > 0) {
 
         // read loop
+        size_t num_read_workers_prev = num_read_workers;
         for (; bytes_to_read > 0 && num_read_workers + num_write_workers < NUM_WORKERS; ++num_read_workers) {
             struct read_info info = get_read_info(&bytes_to_read, &read_offset);
             errno_or_zero = read_request(&ring, info.offset, info.size, in);
             if (errno_or_zero < 0) {
                 return errno_or_zero;
             }
+        }
+        if (num_read_workers_prev != num_read_workers) {
             errno_or_zero = io_uring_submit(&ring);
             if (errno_or_zero < 0) {
                 return errno_or_zero;
             }
-        }
+		}
 
         size_t should_wait_cqe = 1;
         while (bytes_to_write > 0) {
