@@ -90,7 +90,7 @@ int copy(int in, int out) {
     int errno_or_zero = 0;
 
     struct io_uring ring;
-    errno_or_zero = io_uring_queue_init(NUM_WORKERS * 2, &ring, 0);
+    errno_or_zero = io_uring_queue_init(NUM_WORKERS, &ring, 0);
     if (errno_or_zero < 0) {
         return errno_or_zero;
     }
