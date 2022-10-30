@@ -101,7 +101,7 @@ int copy(int in, int out) {
     }
 
     off_t read_offset = 0;
-    struct io_uring_cqe* cqe = NULL;
+    struct io_uring_cqe* cqe;
 
     size_t bytes_to_read = (size_t) in_stat.st_size;
     size_t bytes_to_write = bytes_to_read;
