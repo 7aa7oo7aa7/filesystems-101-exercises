@@ -15,8 +15,8 @@ struct user_data {
     int is_write;
     off_t first_offset;
     off_t offset;
-    void* buf;
     size_t buf_size;
+    void* buf;
 };
 
 struct read_info {
@@ -101,7 +101,7 @@ int copy(int in, int out) {
     }
 
     off_t read_offset = 0;
-    struct io_uring_cqe* cqe = calloc(sizeof(struct io_uring_cqe), 1);
+    struct io_uring_cqe* cqe;
 
     size_t bytes_to_read = (size_t) in_stat.st_size;
     size_t bytes_to_write = bytes_to_read;
