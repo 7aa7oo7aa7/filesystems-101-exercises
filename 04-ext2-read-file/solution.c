@@ -17,11 +17,15 @@ int copy_direct(int img, int out, const size_t block, const size_t block_size, s
     if (bytes_read < (ssize_t) block_size) {
         return -errno;
     }
-    ssize_t bytes_written = pwrite(out, buf, block_size, 0);
-    if (bytes_written < (ssize_t) block_size) {
+    size_t bytes_to_write = block_size;
+    if (*left_to_copy < (ssize_t) block_size) {
+        bytes_to_write = (size_t) (*left_to_copy);
+    }
+    ssize_t bytes_written = pwrite(out, buf, bytes_to_write, 0);
+    if (bytes_written < (ssize_t) bytes_to_write) {
         return -errno;
     }
-    *left_to_copy -= bytes_written;
+    *left_to_copy -= bytes_to_write;
     return 0;
 }
 
