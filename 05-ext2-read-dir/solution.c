@@ -22,20 +22,26 @@ int report_direct(int img, const uint32_t block, const size_t block_size, ssize_
         return -errno;
     }
 
+    ssize_t cur_left_to_read = block_size;
+    if (*left_to_read < block_size) {
+        cur_left_to_read = *left_to_read;
+    }
+
     char* file_name = (char*) calloc(EXT2_NAME_LEN + 1, sizeof(char));
     struct ext2_dir_entry_2* dir_entry = NULL;
     off_t offset = 0;
-    for (dir_entry = get_dir_entry(buf, 0); dir_entry->inode != 0 && *left_to_read > 0; dir_entry = get_dir_entry(buf, offset)) {
+    for (dir_entry = get_dir_entry(buf, 0); dir_entry != NULL && dir_entry->inode != 0 && cur_left_to_read > 0; dir_entry = get_dir_entry(buf, offset)) {
         memcpy(file_name, dir_entry->name, dir_entry->name_len);
         file_name[dir_entry->name_len] = '\0';
         if (dir_entry->file_type == EXT2_FT_REG_FILE || dir_entry->file_type == EXT2_FT_DIR) {
             char file_type = (dir_entry->file_type == EXT2_FT_REG_FILE) ? 'f' : 'd';
             report_file(dir_entry->inode, file_type, file_name);
         }
-        *left_to_read -= dir_entry->rec_len;
+        cur_left_to_read -= dir_entry->rec_len;
         offset += dir_entry->rec_len;
     }
 
+    *left_to_read -= cur_left_to_read;
     free(file_name);
     return 0;
 }
