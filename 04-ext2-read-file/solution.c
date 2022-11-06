@@ -83,11 +83,11 @@ int dump_file(int img, int inode_nr, int out) {
     int retval = 0;
     for (size_t block = 0; block < EXT2_N_BLOCKS && inode.i_block[block] != 0 && left_to_copy > 0; ++block) {
         if (block < EXT2_NDIR_BLOCKS) {
-            retval = copy_direct(img, out, block, block_size, &left_to_copy, buf);
+            retval = copy_direct(img, out, inode.i_block[block], block_size, &left_to_copy, buf);
         } else if (block == EXT2_IND_BLOCK) {
-            retval = copy_indirect(img, out, block, block_size, &left_to_copy, buf, false);
+            retval = copy_indirect(img, out, inode.i_block[block], block_size, &left_to_copy, buf, false);
         } else if (block == EXT2_DIND_BLOCK) {
-            retval = copy_indirect(img, out, block, block_size, &left_to_copy, buf, true);
+            retval = copy_indirect(img, out, inode.i_block[block], block_size, &left_to_copy, buf, true);
         } else {
             retval = -1;
         }
