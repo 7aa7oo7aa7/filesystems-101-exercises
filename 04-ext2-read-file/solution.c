@@ -22,7 +22,7 @@ int copy_direct(int img, int out, const uint32_t block, const size_t block_size,
     if (*left_to_copy < (ssize_t) block_size) {
         bytes_to_write = (size_t) (*left_to_copy);
     }
-    ssize_t bytes_written = pwrite(out, buf, bytes_to_write, 0);
+    ssize_t bytes_written = write(out, buf, bytes_to_write);
     if (bytes_written < (ssize_t) bytes_to_write) {
         return -errno;
     }
@@ -35,9 +35,9 @@ int copy_indirect(int img, int out, const uint32_t block, const size_t block_siz
     if (bytes_read < (ssize_t) block_size) {
         return -errno;
     }
-    uint32_t* indirect_block_buf = (uint32_t*) calloc(block_size / 4, sizeof(uint32_t));
+    uint32_t* indirect_block_buf = (uint32_t*) calloc(block_size / sizeof(uint32_t), sizeof(uint32_t));
     int retval = 0;
-    for (size_t i = 0; i < block_size / 4 && indirect_block_buf[i] != 0 && *left_to_copy > 0; ++i) {
+    for (size_t i = 0; i < block_size / sizeof(uint32_t) && indirect_block_buf[i] != 0 && *left_to_copy > 0; ++i) {
         if (is_double) {
             retval = copy_indirect(img, out, indirect_block_buf[i], block_size, left_to_copy, (void*) indirect_block_buf, false);
         } else {
