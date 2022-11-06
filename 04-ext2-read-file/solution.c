@@ -34,17 +34,16 @@ int copy_indirect(int img, int out, const size_t block, const size_t block_size,
     int retval = 0;
     for (size_t i = 0; i < block_size / 4 && buf[i] != 0 && *left_to_copy > 0; ++i) {
         if (is_double) {
-            retval = copy_indirect(img, out, block, block_size, left_to_copy, indirect_block_buf, false);
+            retval = copy_indirect(img, out, indirect_block_buf[i], block_size, left_to_copy, indirect_block_buf, false);
         } else {
-            retval = copy_direct(img, out, block, block_size, left_to_copy, indirect_block_buf);
+            retval = copy_direct(img, out, indirect_block_buf[i], block_size, left_to_copy, indirect_block_buf);
         }
         if (retval < 0) {
-            free(indirect_block_buf);
-            return retval;
+            break;
         }
     }
     free(indirect_block_buf);
-    return 0;
+    return retval;
 }
 
 int dump_file(int img, int inode_nr, int out) {
