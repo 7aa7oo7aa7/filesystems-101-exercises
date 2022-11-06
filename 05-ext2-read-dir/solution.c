@@ -23,7 +23,7 @@ int report_direct(int img, const uint32_t block, const size_t block_size, ssize_
     }
 
     ssize_t cur_left_to_read = block_size;
-    if (*left_to_read < block_size) {
+    if (*left_to_read < (ssize_t) block_size) {
         cur_left_to_read = *left_to_read;
     }
 
