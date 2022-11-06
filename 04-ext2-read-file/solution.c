@@ -30,18 +30,18 @@ int copy_direct(int img, int out, const uint32_t block, const size_t block_size,
     return 0;
 }
 
-int copy_indirect(int img, int out, const uint32_t block, const size_t block_size, ssize_t* left_to_copy, void* buf, bool is_double) {
+int copy_indirect(int img, int out, const uint32_t block, const size_t block_size, ssize_t* left_to_copy, uint32_t* buf, bool is_double) {
     ssize_t bytes_read = read_block(img, block, block_size, buf);
     if (bytes_read < (ssize_t) block_size) {
         return -errno;
     }
-    uint32_t* indirect_block_buf = (uint32_t*) calloc(block_size / sizeof(uint32_t), sizeof(uint32_t));
+    void* indirect_block_buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; i < block_size / sizeof(uint32_t) && indirect_block_buf[i] != 0 && *left_to_copy > 0; ++i) {
+    for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && *left_to_copy > 0; ++i) {
         if (is_double) {
-            retval = copy_indirect(img, out, indirect_block_buf[i], block_size, left_to_copy, (void*) indirect_block_buf, false);
+            retval = copy_indirect(img, out, buf[i], block_size, left_to_copy, (uint32_t*) indirect_block_buf, false);
         } else {
-            retval = copy_direct(img, out, indirect_block_buf[i], block_size, left_to_copy, (void*) indirect_block_buf);
+            retval = copy_direct(img, out, buf[i], block_size, left_to_copy, (void*) indirect_block_buf);
         }
         if (retval < 0) {
             break;
@@ -90,9 +90,9 @@ int dump_file(int img, int inode_nr, int out) {
         if (i < EXT2_NDIR_BLOCKS) {
             retval = copy_direct(img, out, inode.i_block[i], block_size, &left_to_copy, buf);
         } else if (i == EXT2_IND_BLOCK) {
-            retval = copy_indirect(img, out, inode.i_block[i], block_size, &left_to_copy, buf, false);
+            retval = copy_indirect(img, out, inode.i_block[i], block_size, &left_to_copy, (uint32_t*) buf, false);
         } else if (i == EXT2_DIND_BLOCK) {
-            retval = copy_indirect(img, out, inode.i_block[i], block_size, &left_to_copy, buf, true);
+            retval = copy_indirect(img, out, inode.i_block[i], block_size, &left_to_copy, (uint32_t*) buf, true);
         } else {
             retval = -1;
         }
