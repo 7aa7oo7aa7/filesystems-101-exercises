@@ -84,17 +84,17 @@ int get_inode_direct(const size_t block_size, void* buf, const char* filename, c
     return 0;
 }
 
-int get_inode_indirect(int img, const size_t block_size, uint32_t* buf, const char* filename, const size_t filename_len, bool is_double) {
+int get_inode_indirect(int img, const size_t block_size, uint32_t* buf, const char* filename, const size_t filename_len, int block_type) {
     void* indirect_block_buf = calloc(block_size, sizeof(char));
     int inode_nr = 0;
     for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && inode_nr == 0; ++i) {
         ssize_t bytes_read = read_block(img, buf[i], block_size, indirect_block_buf);
         if (bytes_read < 0) {
             inode_nr = -errno;
-        } else if (is_double) {
-            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) indirect_block_buf, filename, filename_len, false);
-        } else {
+        } else if (block_type == EXT2_IND_BLOCK) {
             inode_nr = get_inode_direct(block_size, indirect_block_buf, filename, filename_len);
+        } else {
+            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) indirect_block_buf, filename, filename_len, block_type - 1);
         }
     }
     free(indirect_block_buf);
@@ -111,10 +111,8 @@ int get_next_inode(int img, const size_t block_size, const char* filename, const
             retval = -errno;
         } else if (i < EXT2_NDIR_BLOCKS) {
             inode_nr = get_inode_direct(block_size, buf, filename, filename_len);
-        } else if (i == EXT2_IND_BLOCK) {
-            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) buf, filename, filename_len, false);
-        } else if (i == EXT2_DIND_BLOCK) {
-            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) buf, filename, filename_len, true);
+        } else if (i == EXT2_IND_BLOCK || i == EXT2_DIND_BLOCK || i == EXT2_TIND_BLOCK) {
+            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) buf, filename, filename_len, i);
         } else {
             retval = -ENOENT;
         }
