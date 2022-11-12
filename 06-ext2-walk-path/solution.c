@@ -78,15 +78,16 @@ ssize_t read_inode(int img, int inode_nr, struct ext2_super_block* super_block, 
 }
 
 int get_inode_direct(const size_t block_size, void* buf, const char* filename) {
-    struct ext2_dir_entry_2* dirent = (struct ext2_dir_entry_2*) buf;
-    for (off_t offset = 0; dirent->rec_len > 0 && offset < (off_t) block_size; offset += dirent->rec_len) {
-        dirent = (struct ext2_dir_entry_2*) (buf + offset);
+    size_t rec_len = 1;
+    for (off_t offset = 0; rec_len > 0 && offset < (off_t) block_size; offset += rec_len) {
+        struct ext2_dir_entry_2* dirent = (struct ext2_dir_entry_2*) (buf + offset);
         if (dirent->inode == 0) {
             break;
         }
         if (strncmp(dirent->name, filename, dirent->name_len) == 0) {
             return dirent->inode;
         }
+        rec_len = dirent->rec_len;
     }
     return 0;
 }
