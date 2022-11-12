@@ -128,6 +128,9 @@ int get_next_inode(int img, const size_t block_size, const char* filename, struc
         } else {
             retval = -ENOENT;
         }
+        if (inode_nr == 0) {
+            retval = -ENOENT;
+        }
         if (retval < 0 || inode_nr != 0) {
             break;
         }
@@ -174,7 +177,7 @@ int dump_file(int img, const char* path, int out) {
         for (; path != NULL && *path != '/'; path += sizeof(char)) {
             filename[filename_len++] = *path;
         }
-        filename[filename_len++] = EOF;
+        filename[filename_len++] = '\0';
         inode_nr = get_next_inode(img, block_size, filename, &inode);
     }
     if (inode_nr < 0) {
