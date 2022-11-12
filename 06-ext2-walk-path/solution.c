@@ -157,7 +157,7 @@ int dump_file(int img, const char* path, int out) {
         if (*path == '/') {
             path += sizeof(char);
         }
-        bytes_read = read_block_group(img, inode_nr, SUPERBLOCK_OFFSET, &super_block, &block_group);
+        bytes_read = read_block_group(img, inode_nr, super_block.s_first_data_block + 1, &super_block, &block_group);
         if (bytes_read < 0) {
             return bytes_read;
         }
