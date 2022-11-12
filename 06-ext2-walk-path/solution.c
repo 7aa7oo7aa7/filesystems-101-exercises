@@ -63,14 +63,11 @@ int copy_indirect(int img, int out, const uint32_t block, const size_t block_siz
     }
     void* indirect_block_buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && *left_to_copy > 0; ++i) {
+    for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && *left_to_copy > 0 && retval >= 0; ++i) {
         if (is_double) {
             retval = copy_indirect(img, out, buf[i], block_size, left_to_copy, (uint32_t*) indirect_block_buf, false);
         } else {
             retval = copy_direct(img, out, buf[i], block_size, left_to_copy, (void*) indirect_block_buf);
-        }
-        if (retval < 0) {
-            break;
         }
     }
     free(indirect_block_buf);
@@ -90,7 +87,7 @@ int get_inode_direct(const size_t block_size, void* buf, const char* filename, c
 int get_inode_indirect(int img, const size_t block_size, uint32_t* buf, const char* filename, const size_t filename_len, bool is_double) {
     void* indirect_block_buf = calloc(block_size, sizeof(char));
     int inode_nr = 0;
-    for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && inode_nr != 0; ++i) {
+    for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && inode_nr >= 0; ++i) {
         ssize_t bytes_read = read_block(img, buf[i], block_size, indirect_block_buf);
         if (bytes_read < 0) {
             inode_nr = -errno;
@@ -108,7 +105,7 @@ int get_next_inode(int img, const size_t block_size, const char* filename, const
     void* buf = calloc(block_size, sizeof(char));
     int retval = 0;
     int inode_nr = 0;
-    for (size_t i = 0; i < EXT2_N_BLOCKS && inode->i_block[i] != 0; ++i) {
+    for (size_t i = 0; i < EXT2_N_BLOCKS && inode->i_block[i] != 0 && retval >= 0; ++i) {
         ssize_t bytes_read = read_block(img, inode->i_block[i], block_size, buf);
         if (bytes_read < 0) {
             retval = -errno;
@@ -123,9 +120,6 @@ int get_next_inode(int img, const size_t block_size, const char* filename, const
         }
         if (inode_nr == 0) {
             retval = -ENOENT;
-        }
-        if (retval < 0 || inode_nr != 0) {
-            break;
         }
     }
     free(buf);
