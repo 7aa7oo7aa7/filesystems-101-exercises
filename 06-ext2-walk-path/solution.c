@@ -149,7 +149,7 @@ int dump_file(int img, const char* path, int out) {
         if (bytes_read < 0) {
             return bytes_read;
         }
-        if (S_ISDIR(inode.i_mode) == 0) {
+        if ((inode.i_mode & LINUX_S_IFDIR) == 0) {
             return -ENOTDIR;
         }
         char filename[EXT2_NAME_LEN + 1];
