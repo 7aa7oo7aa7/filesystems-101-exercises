@@ -87,7 +87,7 @@ int get_inode_direct(const size_t block_size, void* buf, const char* filename, c
 int get_inode_indirect(int img, const size_t block_size, uint32_t* buf, const char* filename, const size_t filename_len, bool is_double) {
     void* indirect_block_buf = calloc(block_size, sizeof(char));
     int inode_nr = 0;
-    for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && inode_nr != 0; ++i) {
+    for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && inode_nr == 0; ++i) {
         ssize_t bytes_read = read_block(img, buf[i], block_size, indirect_block_buf);
         if (bytes_read < 0) {
             inode_nr = -errno;
