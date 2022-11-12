@@ -15,6 +15,30 @@ ssize_t read_block(int img, const uint32_t block, const size_t block_size, void*
     return pread(img, buf, block_size, offset);
 }
 
+ssize_t read_block_group(int img, int inode_nr, struct ext2_super_block* super_block, struct ext2_group_desc* block_group) {
+    size_t block_size = 1024 << super_block->s_log_block_size;
+    size_t block_group_size = sizeof(struct ext2_group_desc);
+    int inode_block_group = (inode_nr - 1) / super_block->s_inodes_per_group;
+    off_t block_group_offset = block_size * (super_block->s_first_data_block + 1) + block_group_size * inode_block_group;
+    ssize_t bytes_read = pread(img, block_group, block_group_size, block_group_offset);
+    if (bytes_read < (ssize_t) block_group_size) {
+        return -errno;
+    }
+    return bytes_read;
+}
+
+ssize_t read_inode(int img, int inode_nr, struct ext2_super_block* super_block, struct ext2_group_desc* block_group, struct ext2_inode* inode) {
+    size_t block_size = 1024 << super_block->s_log_block_size;
+    int inode_block = (inode_nr - 1) % super_block->s_inodes_per_group;
+    off_t inode_offset = block_size * block_group->bg_inode_table + super_block->s_inode_size * inode_block;
+    size_t inode_size = sizeof(struct ext2_inode);
+    ssize_t bytes_read = pread(img, inode, inode_size, inode_offset);
+    if (bytes_read < (ssize_t) inode_size) {
+        return -errno;
+    }
+    return bytes_read;
+}
+
 int copy_direct(int img, int out, const uint32_t block, const size_t block_size, ssize_t* left_to_copy, void* buf) {
     ssize_t bytes_read = read_block(img, block, block_size, buf);
     if (bytes_read < (ssize_t) block_size) {
@@ -51,30 +75,6 @@ int copy_indirect(int img, int out, const uint32_t block, const size_t block_siz
     }
     free(indirect_block_buf);
     return retval;
-}
-
-ssize_t read_block_group(int img, int inode_nr, off_t sb_offset, struct ext2_super_block* super_block, struct ext2_group_desc* block_group) {
-    size_t block_size = 1024 << super_block->s_log_block_size;
-    size_t block_group_size = sizeof(struct ext2_group_desc);
-    int inode_block_group = (inode_nr - 1) / super_block->s_inodes_per_group;
-    off_t block_group_offset = block_size * sb_offset + block_group_size * inode_block_group;
-    ssize_t bytes_read = pread(img, block_group, block_group_size, block_group_offset);
-    if (bytes_read < (ssize_t) block_group_size) {
-        return -errno;
-    }
-    return bytes_read;
-}
-
-ssize_t read_inode(int img, int inode_nr, struct ext2_super_block* super_block, struct ext2_group_desc* block_group, struct ext2_inode* inode) {
-    size_t block_size = 1024 << super_block->s_log_block_size;
-    int inode_block = (inode_nr - 1) % super_block->s_inodes_per_group;
-    off_t inode_offset = block_size * block_group->bg_inode_table + super_block->s_inode_size * inode_block;
-    size_t inode_size = sizeof(struct ext2_inode);
-    ssize_t bytes_read = pread(img, inode, inode_size, inode_offset);
-    if (bytes_read < (ssize_t) inode_size) {
-        return -errno;
-    }
-    return bytes_read;
 }
 
 int get_inode_direct(const size_t block_size, void* buf, const char* filename, const size_t filename_len) {
@@ -153,11 +153,11 @@ int dump_file(int img, const char* path, int out) {
 
     // find inode
     int inode_nr = 2;
-    while (path != NULL && inode_nr >= 0) {
+    while (path != NULL && *path != '\0' && inode_nr >= 0) {
         if (*path == '/') {
             path += sizeof(char);
         }
-        bytes_read = read_block_group(img, inode_nr, super_block.s_first_data_block + 1, &super_block, &block_group);
+        bytes_read = read_block_group(img, inode_nr, &super_block, &block_group);
         if (bytes_read < 0) {
             return bytes_read;
         }
@@ -170,7 +170,7 @@ int dump_file(int img, const char* path, int out) {
         }
         char filename[EXT2_NAME_LEN + 1];
         size_t filename_len = 0;
-        for (; path != NULL && *path != '/'; path += sizeof(char)) {
+        for (; path != NULL && path != '\0' && *path != '/'; path += sizeof(char)) {
             filename[filename_len++] = *path;
         }
         filename[filename_len] = '\0';
@@ -181,7 +181,7 @@ int dump_file(int img, const char* path, int out) {
     }
 
     // read block group
-    bytes_read = read_block_group(img, inode_nr, super_block.s_first_data_block + 1, &super_block, &block_group);
+    bytes_read = read_block_group(img, inode_nr, &super_block, &block_group);
     if (bytes_read < 0) {
         return bytes_read;
     }
