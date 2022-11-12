@@ -78,16 +78,11 @@ ssize_t read_inode(int img, int inode_nr, struct ext2_super_block* super_block, 
 }
 
 int get_inode_direct(const size_t block_size, void* buf, const char* filename, const size_t filename_len) {
-    size_t rec_len = 1;
-    for (size_t offset = 0; rec_len > 0 && offset < block_size; offset += rec_len) {
-        struct ext2_dir_entry_2* dirent = (struct ext2_dir_entry_2*) (buf + offset);
-        if (dirent->inode == 0) {
-            break;
-        }
+    struct ext2_dir_entry_2* dirent = (struct ext2_dir_entry_2*) buf;
+    for (size_t offset = 0; offset < block_size && dirent->inode != 0; offset += dirent->rec_len, dirent = (struct ext2_dir_entry_2*) (buf + offset)) {
         if (strncmp(dirent->name, filename, filename_len) == 0 && filename_len == dirent->name_len) {
             return dirent->inode;
         }
-        rec_len = dirent->rec_len;
     }
     return 0;
 }
@@ -178,7 +173,7 @@ int dump_file(int img, const char* path, int out) {
         for (; path != NULL && *path != '/'; path += sizeof(char)) {
             filename[filename_len++] = *path;
         }
-        filename[filename_len++] = '\0';
+        filename[filename_len] = '\0';
         inode_nr = get_next_inode(img, block_size, filename, filename_len, &inode);
     }
     if (inode_nr < 0) {
