@@ -77,14 +77,14 @@ ssize_t read_inode(int img, int inode_nr, struct ext2_super_block* super_block, 
     return bytes_read;
 }
 
-int get_inode_direct(const size_t block_size, void* buf, const char* filename) {
+int get_inode_direct(const size_t block_size, void* buf, const char* filename, const size_t filename_len) {
     size_t rec_len = 1;
-    for (off_t offset = 0; rec_len > 0 && offset < (off_t) block_size; offset += rec_len) {
+    for (size_t offset = 0; rec_len > 0 && offset < block_size; offset += rec_len) {
         struct ext2_dir_entry_2* dirent = (struct ext2_dir_entry_2*) (buf + offset);
         if (dirent->inode == 0) {
             break;
         }
-        if (strncmp(dirent->name, filename, dirent->name_len) == 0) {
+        if (strncmp(dirent->name, filename, filename_len) == 0 && filename_len == dirent->name_len) {
             return dirent->inode;
         }
         rec_len = dirent->rec_len;
@@ -92,7 +92,7 @@ int get_inode_direct(const size_t block_size, void* buf, const char* filename) {
     return 0;
 }
 
-int get_inode_indirect(int img, const size_t block_size, uint32_t* buf, const char* filename, bool is_double) {
+int get_inode_indirect(int img, const size_t block_size, uint32_t* buf, const char* filename, const size_t filename_len, bool is_double) {
     void* indirect_block_buf = calloc(block_size, sizeof(char));
     int inode_nr = 0;
     for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0; ++i) {
@@ -100,9 +100,9 @@ int get_inode_indirect(int img, const size_t block_size, uint32_t* buf, const ch
         if (bytes_read < 0) {
             inode_nr = -errno;
         } else if (is_double) {
-            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) indirect_block_buf, filename, false);
+            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) indirect_block_buf, filename, filename_len, false);
         } else {
-            inode_nr = get_inode_direct(block_size, indirect_block_buf, filename);
+            inode_nr = get_inode_direct(block_size, indirect_block_buf, filename, filename_len);
         }
         if (inode_nr < 0) {
             break;
@@ -112,7 +112,7 @@ int get_inode_indirect(int img, const size_t block_size, uint32_t* buf, const ch
     return inode_nr;
 }
 
-int get_next_inode(int img, const size_t block_size, const char* filename, struct ext2_inode* inode) {
+int get_next_inode(int img, const size_t block_size, const char* filename, const size_t filename_len, struct ext2_inode* inode) {
     void* buf = calloc(block_size, sizeof(char));
     int retval = 0;
     int inode_nr = 0;
@@ -121,11 +121,11 @@ int get_next_inode(int img, const size_t block_size, const char* filename, struc
         if (bytes_read < 0) {
             retval = -errno;
         } else if (i < EXT2_NDIR_BLOCKS) {
-            inode_nr = get_inode_direct(block_size, buf, filename);
+            inode_nr = get_inode_direct(block_size, buf, filename, filename_len);
         } else if (i == EXT2_IND_BLOCK) {
-            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) buf, filename, false);
+            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) buf, filename, filename_len, false);
         } else if (i == EXT2_DIND_BLOCK) {
-            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) buf, filename, true);
+            inode_nr = get_inode_indirect(img, block_size, (uint32_t*) buf, filename, filename_len, true);
         } else {
             retval = -ENOENT;
         }
@@ -179,7 +179,7 @@ int dump_file(int img, const char* path, int out) {
             filename[filename_len++] = *path;
         }
         filename[filename_len++] = '\0';
-        inode_nr = get_next_inode(img, block_size, filename, &inode);
+        inode_nr = get_next_inode(img, block_size, filename, filename_len, &inode);
     }
     if (inode_nr < 0) {
         return inode_nr;
