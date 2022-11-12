@@ -170,7 +170,7 @@ int dump_file(int img, const char* path, int out) {
         }
         char filename[EXT2_NAME_LEN + 1];
         size_t filename_len = 0;
-        for (; path != NULL && path != '\0' && *path != '/'; path += sizeof(char)) {
+        for (; path != NULL && *path != '\0' && *path != '/'; path += sizeof(char)) {
             filename[filename_len++] = *path;
         }
         filename[filename_len] = '\0';
