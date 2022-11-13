@@ -135,7 +135,7 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
             return -ENOENT;
         }
     }
-    return 0;
+    return inode_nr;
 }
 
 int copy_direct(int img, int out, const uint32_t block, const size_t block_size, ssize_t* left_to_copy, void* buf) {
