@@ -64,7 +64,7 @@ int get_inode_direct(int img, uint32_t block, size_t block_size, void* buf, cons
 }
 
 int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf, const char* filename, size_t filename_len, bool is_double) {
-    ssize_t bytes_read = read_block(img, block, block_size, buf);
+    ssize_t bytes_read = read_block(img, block, block_size, (void*) buf);
     if (bytes_read < (ssize_t) block_size) {
         return -errno;
     }
@@ -74,7 +74,7 @@ int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf
         if (is_double) {
             retval = get_inode_indirect(img, buf[i], block_size, (uint32_t*) indirect_block_buf, filename, filename_len, false);
         } else {
-            retval = get_inode_direct(img, buf[i], block_size, (void*) indirect_block_buf, filename, filename_len);
+            retval = get_inode_direct(img, buf[i], block_size, indirect_block_buf, filename, filename_len);
         }
     }
     free(indirect_block_buf);
@@ -103,7 +103,7 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
     size_t block_size = 1024 << super_block->s_log_block_size;
     int retval = 0;
     int inode_nr = 2;
-    while (path != NULL && inode_nr >= 0) {
+    while (path != NULL && *path != '\0' && inode_nr >= 0) {
         path += sizeof(char);
 
         struct ext2_group_desc block_group;
@@ -126,9 +126,6 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         size_t filename_len = 0;
         for (; path != NULL && *path != '\0' && *path != '/'; path += sizeof(char)) {
             filename[filename_len++] = *path;
-        }
-        if (path != NULL && *path == '\0') {
-            path = NULL;
         }
         filename[filename_len] = '\0';
 
