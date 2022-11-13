@@ -126,7 +126,7 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         for (; path != NULL && *path != '\0' && *path != '/'; ++path) {
             filename[filename_len++] = *path;
         }
-        filename[filename_len] = '\0';
+        filename[filename_len++] = '\0';
 
         inode_nr = get_next_inode(img, block_size, &inode, filename, filename_len);
         if (inode_nr < 0) {
