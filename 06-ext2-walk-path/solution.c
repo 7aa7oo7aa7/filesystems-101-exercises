@@ -70,7 +70,7 @@ int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf
     }
     void* indirect_block_buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; retval >= 0 && i < block_size / sizeof(uint32_t) && buf[i] != 0; ++i) {
+    for (size_t i = 0; retval == 0 && i < block_size / sizeof(uint32_t) && buf[i] != 0; ++i) {
         if (is_double) {
             retval = get_inode_indirect(img, buf[i], block_size, (uint32_t*) indirect_block_buf, filename, filename_len, false);
         } else {
@@ -126,7 +126,7 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         for (; path != NULL && *path != '\0' && *path != '/'; ++path) {
             filename[filename_len++] = *path;
         }
-        filename[filename_len++] = '\0';
+        filename[filename_len] = '\0';
 
         inode_nr = get_next_inode(img, block_size, &inode, filename, filename_len);
         if (inode_nr < 0) {
