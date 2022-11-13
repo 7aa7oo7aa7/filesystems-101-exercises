@@ -103,8 +103,8 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
     size_t block_size = 1024 << super_block->s_log_block_size;
     int retval = 0;
     int inode_nr = 2;
-    while (path != NULL && *path != '\0' && inode_nr >= 0) {
-        path += sizeof(char);
+    while (path != NULL && *path != '\0') {
+        ++path;
 
         struct ext2_group_desc block_group;
         ssize_t bytes_read = read_block_group(img, inode_nr, super_block, &block_group);
@@ -123,15 +123,19 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         }
 
         char filename[EXT2_NAME_LEN + 1];
-        size_t filename_len = 0;
-        for (; path != NULL && *path != '\0' && *path != '/'; path += sizeof(char)) {
-            filename[filename_len++] = *path;
-        }
+        char* next_dir = strchr(path, '/');
+        size_t filename_len = (next_dir == NULL) ? strlen(path) : ((size_t) (next_dir - path));
+        memcpy(filename, path, filename_len);
         filename[filename_len] = '\0';
+        path = next_dir;
 
         inode_nr = get_next_inode(img, block_size, &inode, filename, filename_len);
+        if (inode_nr < 0) {
+            return inode_nr;
+        } else if (inode_nr == 0) {
+            return -ENOENT;
+        }
     }
-    retval = (inode_nr == 0) ? -ENOENT : inode_nr;
     return retval;
 }
 
