@@ -84,7 +84,7 @@ int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf
 int get_next_inode(int img, size_t block_size, struct ext2_inode* inode, const char* filename, size_t filename_len) {
     void* buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; retval >= 0 && i < EXT2_N_BLOCKS && inode->i_block[i] != 0; ++i) {
+    for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS && inode->i_block[i] != 0; ++i) {
         if (i < EXT2_NDIR_BLOCKS) {
             retval = get_inode_direct(img, inode->i_block[i], block_size, buf, filename, filename_len);
         } else if (i == EXT2_IND_BLOCK) {
@@ -101,7 +101,6 @@ int get_next_inode(int img, size_t block_size, struct ext2_inode* inode, const c
 
 int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
     size_t block_size = 1024 << super_block->s_log_block_size;
-    int retval = 0;
     int inode_nr = 2;
     while (path != NULL && *path != '\0') {
         ++path;
@@ -123,11 +122,11 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         }
 
         char filename[EXT2_NAME_LEN + 1];
-        char* next_dir = strchr(path, '/');
-        size_t filename_len = (next_dir == NULL) ? strlen(path) : ((size_t) (next_dir - path));
-        memcpy(filename, path, filename_len);
+        size_t filename_len = 0;
+        for (; path != NULL && *path != '\0' && *path != '/'; ++path) {
+            filename[filename_len++] = *path;
+        }
         filename[filename_len] = '\0';
-        path = next_dir;
 
         inode_nr = get_next_inode(img, block_size, &inode, filename, filename_len);
         if (inode_nr < 0) {
@@ -136,7 +135,7 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
             return -ENOENT;
         }
     }
-    return retval;
+    return 0;
 }
 
 int copy_direct(int img, int out, const uint32_t block, const size_t block_size, ssize_t* left_to_copy, void* buf) {
