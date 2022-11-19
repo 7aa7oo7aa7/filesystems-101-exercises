@@ -72,7 +72,7 @@ int copy_indirect(int img, int out, const uint32_t block, const size_t block_siz
     }
     void* indirect_block_buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; retval >= 0 && i < block_size / sizeof(uint32_t) && buf[i] != 0 && *left_to_copy > 0; ++i) {
+    for (size_t i = 0; retval >= 0 && i < block_size / sizeof(uint32_t) && *left_to_copy > 0; ++i) {
         if (is_double) {
             retval = copy_indirect(img, out, buf[i], block_size, left_to_copy, (uint32_t*) indirect_block_buf, false);
         } else {
@@ -88,7 +88,7 @@ int copy_file(int img, int out, struct ext2_super_block* super_block, struct ext
     ssize_t left_to_copy = inode->i_size;
     void* buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; retval >= 0 && i < EXT2_N_BLOCKS && inode->i_block[i] != 0 && left_to_copy > 0; ++i) {
+    for (size_t i = 0; retval >= 0 && i < EXT2_N_BLOCKS && left_to_copy > 0; ++i) {
         if (i < EXT2_NDIR_BLOCKS) {
             retval = copy_direct(img, out, inode->i_block[i], block_size, &left_to_copy, buf);
         } else if (i == EXT2_IND_BLOCK) {
