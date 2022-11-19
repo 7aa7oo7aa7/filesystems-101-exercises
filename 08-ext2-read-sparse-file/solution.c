@@ -49,13 +49,13 @@ ssize_t read_inode(int img, int inode_nr, struct ext2_super_block* super_block, 
 }
 
 int copy_direct(int img, int out, const uint32_t block, const size_t block_size, ssize_t* left_to_copy, void* buf) {
-    ssize_t bytes_read = read_block(img, block, block_size, buf);
-    if (bytes_read < (ssize_t) block_size) {
-        return -errno;
-    }
     size_t bytes_to_write = block_size;
     if (*left_to_copy < (ssize_t) block_size) {
         bytes_to_write = (size_t) (*left_to_copy);
+    }
+    ssize_t bytes_read = read_block(img, block, bytes_to_write, buf);
+    if (bytes_read < (ssize_t) block_size) {
+        return -errno;
     }
     ssize_t bytes_written = write(out, buf, bytes_to_write);
     if (bytes_written < (ssize_t) bytes_to_write) {
