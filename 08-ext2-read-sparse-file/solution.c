@@ -10,9 +10,9 @@
 #include <sys/stat.h>
 #include <ext2fs/ext2fs.h>
 
-ssize_t read_block(int img, const uint32_t block, const size_t block_size, void* buf) {
+ssize_t read_block(int img, const uint32_t block, const size_t block_size, const size_t bytes_to_read, void* buf) {
     off_t offset = block_size * block;
-    return pread(img, buf, block_size, offset);
+    return pread(img, buf, bytes_to_read, offset);
 }
 
 ssize_t read_super_block(int img, struct ext2_super_block* super_block) {
@@ -53,8 +53,8 @@ int copy_direct(int img, int out, const uint32_t block, const size_t block_size,
     if (*left_to_copy < (ssize_t) block_size) {
         bytes_to_write = (size_t) (*left_to_copy);
     }
-    ssize_t bytes_read = read_block(img, block, bytes_to_write, buf);
-    if (bytes_read < (ssize_t) block_size) {
+    ssize_t bytes_read = read_block(img, block, block_size, bytes_to_write, buf);
+    if (bytes_read < (ssize_t) bytes_to_write) {
         return -errno;
     }
     ssize_t bytes_written = write(out, buf, bytes_to_write);
@@ -66,7 +66,7 @@ int copy_direct(int img, int out, const uint32_t block, const size_t block_size,
 }
 
 int copy_indirect(int img, int out, const uint32_t block, const size_t block_size, ssize_t* left_to_copy, uint32_t* buf, bool is_double) {
-    ssize_t bytes_read = read_block(img, block, block_size, buf);
+    ssize_t bytes_read = read_block(img, block, block_size, block_size, buf);
     if (bytes_read < (ssize_t) block_size) {
         return -errno;
     }
