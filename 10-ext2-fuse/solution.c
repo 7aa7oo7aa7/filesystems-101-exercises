@@ -129,7 +129,6 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         }
 
         if ((inode.i_mode & LINUX_S_IFDIR) == 0) {
-            assert(0);
             return -ENOTDIR;
         }
 
@@ -142,6 +141,7 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
 
         inode_nr = get_next_inode(img, block_size, &inode, filename, filename_len);
         if (inode_nr < 0) {
+            assert(0);
             return inode_nr;
         } else if (inode_nr == 0) {
             return -ENOENT;
