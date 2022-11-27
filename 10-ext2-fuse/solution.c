@@ -415,7 +415,6 @@ static int ext2fuse_getattr(const char* path, struct stat* stat, struct fuse_fil
 }
 
 static int ext2fuse_opendir(const char* path, struct fuse_file_info* ffi) {
-    (void) ffi;
     struct ext2_super_block super_block;
     ssize_t bytes_read = read_super_block(ext2fuse_img, &super_block);
     if (bytes_read < 0) {
@@ -424,6 +423,20 @@ static int ext2fuse_opendir(const char* path, struct fuse_file_info* ffi) {
     int inode_nr = get_inode(ext2fuse_img, path, &super_block);
     if (inode_nr < 0) {
         return -ENOENT;
+    }
+    ffi->fh = inode_nr;
+    struct ext2_group_desc block_group;
+    bytes_read = read_block_group(ext2fuse_img, inode_nr, &super_block, &block_group);
+    if (bytes_read < 0) {
+        return bytes_read;
+    }
+    struct ext2_inode inode;
+    bytes_read = read_inode(ext2fuse_img, inode_nr, &super_block, &block_group, &inode);
+    if (bytes_read < 0) {
+        return bytes_read;
+    }
+    if (!S_ISDIR(inode.i_mode)) {
+        return -ENOTDIR;
     }
     return 0;
 }
