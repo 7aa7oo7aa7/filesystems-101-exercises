@@ -95,7 +95,11 @@ int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf
 int get_next_inode(int img, size_t block_size, struct ext2_inode* inode, const char* filename, size_t filename_len) {
     void* buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS && inode->i_block[i] != 0; ++i) {
+    for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS; ++i) {
+        if (inode->i_block[i] == 0) {
+            assert(0);
+            break;
+        }
         if (i < EXT2_NDIR_BLOCKS) {
             retval = get_inode_direct(img, inode->i_block[i], block_size, buf, filename, filename_len);
         } else if (i == EXT2_IND_BLOCK) {
@@ -143,7 +147,6 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         if (inode_nr < 0) {
             return inode_nr;
         } else if (inode_nr == 0) {
-            assert(0);
             return -ENOENT;
         }
     }
