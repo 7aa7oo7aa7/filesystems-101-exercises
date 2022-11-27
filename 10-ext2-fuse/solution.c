@@ -80,10 +80,15 @@ int get_inode_direct(int img, uint32_t block, size_t block_size, ssize_t* left_t
 }
 
 int get_inode_indirect(int img, uint32_t block, size_t block_size, ssize_t* left_to_read, uint32_t* buf, const char* filename, size_t filename_len, bool is_double) {
-    ssize_t bytes_read = read_block(img, block, block_size, (void*) buf);
-    if (bytes_read < (ssize_t) block_size) {
+    ssize_t cur_left_to_read = block_size;
+    if (*left_to_read < (ssize_t) block_size) {
+        cur_left_to_read = *left_to_read;
+    }
+    ssize_t bytes_read = read_block(img, block, cur_left_to_read, (void*) buf);
+    if (bytes_read < cur_left_to_read) {
         return -errno;
     }
+    *left_to_read -= cur_left_to_read;
     void* indirect_block_buf = calloc(block_size, sizeof(char));
     int retval = 0;
     for (size_t i = 0; retval == 0 && i < block_size / sizeof(uint32_t) && buf[i] != 0; ++i) {
