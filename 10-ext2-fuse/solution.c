@@ -14,7 +14,7 @@
 int ext2fuse_img;
 
 bool is_writable(struct fuse_file_info* ffi) {
-    return (ffi->flags & O_ACCMODE & (O_WRONLY | O_RDWR)) != 0;
+    return (ffi->flags & O_ACCMODE) != O_RDONLY;
 }
 
 ssize_t read_block(int img, const uint32_t block, const size_t block_size, void* buf) {
@@ -238,17 +238,6 @@ struct ext2_dir_entry_2* get_dir_entry(void* buf, const size_t block_size, off_t
     return (struct ext2_dir_entry_2*) (buf + offset);
 }
 
-mode_t get_st_mode(struct ext2_dir_entry_2* dir_entry) {
-    int file_types[7] = {EXT2_FT_REG_FILE, EXT2_FT_DIR, EXT2_FT_BLKDEV, EXT2_FT_CHRDEV, EXT2_FT_SYMLINK, EXT2_FT_FIFO, EXT2_FT_SOCK};
-    mode_t st_modes[8] = {S_IFREG, S_IFDIR, S_IFBLK, S_IFCHR, S_IFLNK, S_IFIFO, S_IFSOCK, 0};
-    for (int i = 0; i < 8; ++i) {
-        if (i == 7 || file_types[i] == dir_entry->file_type) {
-            return st_modes[i];
-        }
-    }
-    return 0;
-}
-
 int copy_dir_direct(int img, const uint32_t block, const size_t block_size, ssize_t* left_to_read, void* buf, void* dir_buf, fuse_fill_dir_t filler) {
     ssize_t bytes_read = read_block(img, block, block_size, buf);
     if (bytes_read < (ssize_t) block_size) {
@@ -269,7 +258,11 @@ int copy_dir_direct(int img, const uint32_t block, const size_t block_size, ssiz
         file_name[dir_entry->name_len] = '\0';
         struct stat st;
         st.st_ino = dir_entry->inode;
-        st.st_mode = get_st_mode(dir_entry);
+        if (dir_entry->file_type == EXT2_FT_DIR) {
+			st.st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH;
+		} else {
+			st.st_mode = S_IFREG | S_IRUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+		}
         filler(dir_buf, file_name, &st, 0, 0);
         cur_left_to_read -= dir_entry->rec_len;
         offset += dir_entry->rec_len;
@@ -464,9 +457,7 @@ static int ext2fuse_open(const char* path, struct fuse_file_info* ffi) {
 }
 
 static int ext2fuse_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* ffi) {
-    if (is_writable(ffi)) {
-        return -EROFS;
-    }
+    (void) ffi;
     size_t file_size = 0;
     char* file_buf = NULL;
     int retval = dump_file(ext2fuse_img, path, &file_size, file_buf);
