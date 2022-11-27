@@ -409,6 +409,12 @@ static int ext2fuse_getattr(const char* path, struct stat* stat, struct fuse_fil
 }
 
 static int ext2fuse_opendir(const char* path, struct fuse_file_info* ffi) {
+    if (is_writable(ffi)) {
+        return -EROFS;
+    } else if (path[0] != '/') {
+        ffi->fh = 2;
+        return 0;
+    }
     struct ext2_super_block super_block;
     ssize_t bytes_read = read_super_block(ext2fuse_img, &super_block);
     if (bytes_read < 0) {
