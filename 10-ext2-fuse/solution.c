@@ -257,6 +257,7 @@ int copy_dir_direct(int img, const uint32_t block, const size_t block_size, ssiz
         memcpy(file_name, dir_entry->name, dir_entry->name_len);
         file_name[dir_entry->name_len] = '\0';
         struct stat st;
+        memset(&st, 0, sizeof(st));
         st.st_ino = dir_entry->inode;
         if (dir_entry->file_type == EXT2_FT_DIR) {
 			st.st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH;
