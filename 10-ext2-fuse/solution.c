@@ -56,11 +56,16 @@ ssize_t read_inode(int img, int inode_nr, struct ext2_super_block* super_block, 
     return bytes_read;
 }
 
-int get_inode_direct(int img, uint32_t block, size_t block_size, void* buf, const char* filename, size_t filename_len) {
-    ssize_t bytes_read = read_block(img, block, block_size, buf);
-    if (bytes_read < (ssize_t) block_size) {
+int get_inode_direct(int img, uint32_t block, size_t block_size, ssize_t* left_to_read, void* buf, const char* filename, size_t filename_len) {
+    ssize_t cur_left_to_read = block_size;
+    if (*left_to_read < (ssize_t) block_size) {
+        cur_left_to_read = *left_to_read;
+    }
+    ssize_t bytes_read = read_block(img, block, cur_left_to_read, buf);
+    if (bytes_read < cur_left_to_read) {
         return -errno;
     }
+    *left_to_read -= cur_left_to_read;
     struct ext2_dir_entry_2* dirent = (struct ext2_dir_entry_2*) buf;
     for (size_t offset = 0; offset < block_size && dirent->inode != 0; offset += dirent->rec_len) {
         dirent = (struct ext2_dir_entry_2*) (buf + offset);
@@ -74,7 +79,7 @@ int get_inode_direct(int img, uint32_t block, size_t block_size, void* buf, cons
     return 0;
 }
 
-int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf, const char* filename, size_t filename_len, bool is_double) {
+int get_inode_indirect(int img, uint32_t block, size_t block_size, ssize_t* left_to_read, uint32_t* buf, const char* filename, size_t filename_len, bool is_double) {
     ssize_t bytes_read = read_block(img, block, block_size, (void*) buf);
     if (bytes_read < (ssize_t) block_size) {
         return -errno;
@@ -83,9 +88,9 @@ int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf
     int retval = 0;
     for (size_t i = 0; retval == 0 && i < block_size / sizeof(uint32_t) && buf[i] != 0; ++i) {
         if (is_double) {
-            retval = get_inode_indirect(img, buf[i], block_size, (uint32_t*) indirect_block_buf, filename, filename_len, false);
+            retval = get_inode_indirect(img, buf[i], block_size, left_to_read, (uint32_t*) indirect_block_buf, filename, filename_len, false);
         } else {
-            retval = get_inode_direct(img, buf[i], block_size, indirect_block_buf, filename, filename_len);
+            retval = get_inode_direct(img, buf[i], block_size, left_to_read, indirect_block_buf, filename, filename_len);
         }
     }
     free(indirect_block_buf);
@@ -95,16 +100,14 @@ int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf
 int get_next_inode(int img, size_t block_size, struct ext2_inode* inode, const char* filename, size_t filename_len) {
     void* buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS; ++i) {
-        if (inode->i_block[i] == 0) {
-            return 1;
-        }
+    ssize_t left_to_read = inode->i_size;
+    for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS && inode->i_block[i] != 0 && left_to_read > 0; ++i) {
         if (i < EXT2_NDIR_BLOCKS) {
-            retval = get_inode_direct(img, inode->i_block[i], block_size, buf, filename, filename_len);
+            retval = get_inode_direct(img, inode->i_block[i], block_size, &left_to_read, buf, filename, filename_len);
         } else if (i == EXT2_IND_BLOCK) {
-            retval = get_inode_indirect(img, inode->i_block[i], block_size, (uint32_t*) buf, filename, filename_len, false);
+            retval = get_inode_indirect(img, inode->i_block[i], block_size, &left_to_read, (uint32_t*) buf, filename, filename_len, false);
         } else if (i == EXT2_DIND_BLOCK) {
-            retval = get_inode_indirect(img, inode->i_block[i], block_size, (uint32_t*) buf, filename, filename_len, true);
+            retval = get_inode_indirect(img, inode->i_block[i], block_size, &left_to_read, (uint32_t*) buf, filename, filename_len, true);
         } else {
             retval = -ENOENT;
         }
