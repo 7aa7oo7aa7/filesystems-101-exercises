@@ -296,7 +296,7 @@ int copy_dir(int img, struct ext2_super_block* super_block, struct ext2_inode* i
     for (size_t i = 0; retval >= 0 && i < EXT2_N_BLOCKS && left_to_copy > 0; ++i) {
         if (i < EXT2_NDIR_BLOCKS) {
             retval = copy_dir_direct(img, inode->i_block[i], block_size, &left_to_copy, buf, dir_buf, filler);
-        } else if (i == EXT2_IND_BLOCK) {
+        } else if (i == EXT2_IND_BLOCK || i == EXT2_DIND_BLOCK) {
             retval = copy_dir_indirect(img, inode->i_block[i], block_size, &left_to_copy, (uint32_t*) buf, dir_buf, filler, i);
         }
     }
