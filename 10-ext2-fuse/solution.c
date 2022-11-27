@@ -429,6 +429,7 @@ static int ext2fuse_opendir(const char* path, struct fuse_file_info* ffi) {
 }
 
 static int ext2fuse_readdir(const char* path, void* dir_buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* ffi, enum fuse_readdir_flags frf) {
+    (void) path;
     (void) offset;
     (void) frf;
     return dump_dir(ext2fuse_img, ffi->fh, dir_buf, filler);
