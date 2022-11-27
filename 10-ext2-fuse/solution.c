@@ -97,8 +97,7 @@ int get_next_inode(int img, size_t block_size, struct ext2_inode* inode, const c
     int retval = 0;
     for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS; ++i) {
         if (inode->i_block[i] == 0) {
-            assert(0);
-            break;
+            return 1;
         }
         if (i < EXT2_NDIR_BLOCKS) {
             retval = get_inode_direct(img, inode->i_block[i], block_size, buf, filename, filename_len);
