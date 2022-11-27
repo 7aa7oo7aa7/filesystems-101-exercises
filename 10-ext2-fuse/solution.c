@@ -194,18 +194,12 @@ int copy_file(int img, struct ext2_super_block* super_block, struct ext2_inode* 
     return retval;
 }
 
-int dump_file(int img, const char* path, size_t* file_size, char* file_buf) {
+int dump_file(int img, int inode_nr, size_t* file_size, char* file_buf) {
     // read super_block
     struct ext2_super_block super_block;
     ssize_t bytes_read = read_super_block(img, &super_block);
     if (bytes_read < 0) {
         return -errno;
-    }
-
-    // find inode
-    int inode_nr = get_inode(img, path, &super_block);
-    if (inode_nr < 0) {
-        return inode_nr;
     }
 
     // read block group
@@ -461,14 +455,15 @@ static int ext2fuse_open(const char* path, struct fuse_file_info* ffi) {
     if (inode_nr < 0) {
         return -ENOENT;
     }
+    ffi->fh = inode_nr;
     return 0;
 }
 
 static int ext2fuse_read(const char* path, char* buf, size_t size, off_t offset, struct fuse_file_info* ffi) {
-    (void) ffi;
+    (void) path;
     size_t file_size = 0;
     char* file_buf = NULL;
-    int retval = dump_file(ext2fuse_img, path, &file_size, file_buf);
+    int retval = dump_file(ext2fuse_img, ffi->fh, &file_size, file_buf);
     if (retval < 0) {
         return retval;
     }
