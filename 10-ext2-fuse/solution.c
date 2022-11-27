@@ -108,8 +108,8 @@ int get_next_inode(int img, size_t block_size, struct ext2_inode* inode, const c
     ssize_t left_to_read = inode->i_size;
     for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS && left_to_read > 0; ++i) {
         if (inode->i_block[i] == 0) {
-            assert(i <= EXT2_NDIR_BLOCKS);
-            return 1;
+            retval = 1;
+            break;
         }
         if (i < EXT2_NDIR_BLOCKS) {
             retval = get_inode_direct(img, inode->i_block[i], block_size, &left_to_read, buf, filename, filename_len);
@@ -159,6 +159,8 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
             return inode_nr;
         } else if (inode_nr == 0) {
             return -ENOENT;
+        } else if (inode_nr == 1) {
+            return 1;
         }
     }
     assert(inode_nr >= 0);
