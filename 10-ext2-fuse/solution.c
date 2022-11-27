@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <ext2fs/ext2fs.h>
@@ -424,6 +425,7 @@ static int ext2fuse_opendir(const char* path, struct fuse_file_info* ffi) {
     if (inode_nr < 0) {
         return -ENOENT;
     }
+    assert(0);
     ffi->fh = inode_nr;
     struct ext2_group_desc block_group;
     bytes_read = read_block_group(ext2fuse_img, inode_nr, &super_block, &block_group);
