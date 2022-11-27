@@ -64,6 +64,9 @@ int get_inode_direct(int img, uint32_t block, size_t block_size, void* buf, cons
     for (size_t offset = 0; offset < block_size && dirent->inode != 0; offset += dirent->rec_len) {
         dirent = (struct ext2_dir_entry_2*) (buf + offset);
         if (filename_len == dirent->name_len && strncmp(filename, dirent->name, filename_len) == 0) {
+            if (dirent->file_type != EXT2_FT_DIR) {
+                return -ENOTDIR;
+            }
             return dirent->inode;
         }
     }
