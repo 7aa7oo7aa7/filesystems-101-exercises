@@ -310,18 +310,12 @@ int copy_dir(int img, struct ext2_super_block* super_block, struct ext2_inode* i
     return retval;
 }
 
-int dump_dir(int img, const char* path, void* dir_buf, fuse_fill_dir_t filler) {
+int dump_dir(int img, int inode_nr, void* dir_buf, fuse_fill_dir_t filler) {
     // read super_block
     struct ext2_super_block super_block;
     ssize_t bytes_read = read_super_block(img, &super_block);
     if (bytes_read < 0) {
         return -errno;
-    }
-
-    // find inode
-    int inode_nr = get_inode(img, path, &super_block);
-    if (inode_nr < 0) {
-        return inode_nr;
     }
 
     // read block group
@@ -435,10 +429,9 @@ static int ext2fuse_opendir(const char* path, struct fuse_file_info* ffi) {
 }
 
 static int ext2fuse_readdir(const char* path, void* dir_buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* ffi, enum fuse_readdir_flags frf) {
-    (void) ffi;
     (void) offset;
     (void) frf;
-    return dump_dir(ext2fuse_img, path, dir_buf, filler);
+    return dump_dir(ext2fuse_img, ffi->fh, dir_buf, filler);
 }
 
 static int ext2fuse_open(const char* path, struct fuse_file_info* ffi) {
