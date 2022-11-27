@@ -157,6 +157,7 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         if (inode_nr < 0) {
             return inode_nr;
         } else if (inode_nr == 0) {
+            assert(0);
             return -ENOENT;
         }
     }
