@@ -421,9 +421,9 @@ static int ext2fuse_opendir(const char* path, struct fuse_file_info* ffi) {
     if (bytes_read < 0) {
         return -errno;
     }
-    assert(0);
     int inode_nr = get_inode(ext2fuse_img, path, &super_block);
     if (inode_nr < 0) {
+        assert(0);
         return -ENOENT;
     }
     ffi->fh = inode_nr;
