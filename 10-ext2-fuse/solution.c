@@ -106,6 +106,7 @@ int get_next_inode(int img, size_t block_size, struct ext2_inode* inode, const c
     void* buf = calloc(block_size, sizeof(char));
     int retval = 0;
     ssize_t left_to_read = inode->i_size;
+    assert(left_to_read);
     for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS && left_to_read > 0; ++i) {
         if (inode->i_block[i] == 0) {
             return 1;
@@ -157,7 +158,6 @@ int get_inode(int img, const char* path, struct ext2_super_block* super_block) {
         if (inode_nr < 0) {
             return inode_nr;
         } else if (inode_nr == 0) {
-            assert(0);
             return -ENOENT;
         }
     }
