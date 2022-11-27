@@ -91,7 +91,7 @@ int get_inode_indirect(int img, uint32_t block, size_t block_size, uint32_t* buf
 int get_next_inode(int img, size_t block_size, struct ext2_inode* inode, const char* filename, size_t filename_len) {
     void* buf = calloc(block_size, sizeof(char));
     int retval = 0;
-    for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS; ++i) {
+    for (size_t i = 0; retval == 0 && i < EXT2_N_BLOCKS && inode->i_block[i] != 0; ++i) {
         if (i < EXT2_NDIR_BLOCKS) {
             retval = get_inode_direct(img, inode->i_block[i], block_size, buf, filename, filename_len);
         } else if (i == EXT2_IND_BLOCK) {
@@ -187,7 +187,7 @@ int copy_file(int img, struct ext2_super_block* super_block, struct ext2_inode* 
     for (size_t i = 0; retval >= 0 && i < EXT2_N_BLOCKS && left_to_copy > 0; ++i) {
         if (i < EXT2_NDIR_BLOCKS) {
             retval = copy_direct(img, inode->i_block[i], block_size, &left_to_copy, file_buf, &offset);
-        } else {
+        } else if (i == EXT2_IND_BLOCK || i == EXT2_DIND_BLOCK) {
             retval = copy_indirect(img, inode->i_block[i], block_size, &left_to_copy, file_buf, &offset, i);
         }
     }
