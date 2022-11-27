@@ -231,42 +231,127 @@ int dump_file(int img, const char* path, size_t* file_size, char* file_buf) {
     return 0;
 }
 
-// int dump_dir(int img, const char* path, void* dir_buf, fuse_fill_dir_t filler) {
-//     // read super_block
-//     struct ext2_super_block super_block;
-//     ssize_t bytes_read = read_super_block(img, &super_block);
-//     if (bytes_read < 0) {
-//         return -errno;
-//     }
+struct ext2_dir_entry_2* get_dir_entry(void* buf, const size_t block_size, off_t offset) {
+    if (offset >= (off_t) block_size) {
+        return NULL;
+    }
+    return (struct ext2_dir_entry_2*) (buf + offset);
+}
 
-//     // find inode
-//     int inode_nr = get_inode(img, path, &super_block);
-//     if (inode_nr < 0) {
-//         return inode_nr;
-//     }
+mode_t get_st_mode(struct ext2_dir_entry_2* dir_entry) {
+    int file_types[7] = {EXT2_FT_REG_FILE, EXT2_FT_DIR, EXT2_FT_BLKDEV, EXT2_FT_CHRDEV, EXT2_FT_SYMLINK, EXT2_FT_FIFO, EXT2_FT_SOCK};
+    mode_t st_modes[8] = {S_IFREG, S_IFDIR, S_IFBLK, S_IFCHR, S_IFLNK, S_IFIFO, S_IFSOCK, 0};
+    for (int i = 0; i < 8; ++i) {
+        if (i == 7 || file_types[i] == dir_entry->file_type) {
+            return st_modes[i];
+        }
+    }
+    return 0;
+}
 
-//     // read block group
-//     struct ext2_group_desc block_group;
-//     bytes_read = read_block_group(img, inode_nr, &super_block, &block_group);
-//     if (bytes_read < 0) {
-//         return bytes_read;
-//     }
+int copy_dir_direct(int img, const uint32_t block, const size_t block_size, ssize_t* left_to_read, void* buf, void* dir_buf, fuse_fill_dir_t filler) {
+    ssize_t bytes_read = read_block(img, block, block_size, buf);
+    if (bytes_read < (ssize_t) block_size) {
+        return -errno;
+    }
 
-//     // read inode
-//     struct ext2_inode inode;
-//     bytes_read = read_inode(img, inode_nr, &super_block, &block_group, &inode);
-//     if (bytes_read < 0) {
-//         return bytes_read;
-//     }
+    ssize_t cur_left_to_read = block_size;
+    if (*left_to_read < (ssize_t) block_size) {
+        cur_left_to_read = *left_to_read;
+    }
+    *left_to_read -= cur_left_to_read;
 
-//     // copy all blocks
-//     int retval = copy_dir(img, &super_block, &inode, file_size, file_buf);
-//     if (retval < 0) {
-//         return retval;
-//     }
+    char* file_name = (char*) calloc(EXT2_NAME_LEN + 1, sizeof(char));
+    struct ext2_dir_entry_2* dir_entry = get_dir_entry(buf, block_size, 0);
+    off_t offset = 0;
+    for (; dir_entry != NULL && dir_entry->inode != 0 && cur_left_to_read > 0; dir_entry = get_dir_entry(buf, block_size, offset)) {
+        memcpy(file_name, dir_entry->name, dir_entry->name_len);
+        file_name[dir_entry->name_len] = '\0';
+        struct stat st;
+        st.st_ino = dir_entry->inode;
+        st.st_mode = get_st_mode(dir_entry);
+        filler(dir_buf, file_name, &st, 0, 0);
+        cur_left_to_read -= dir_entry->rec_len;
+        offset += dir_entry->rec_len;
+    }
 
-//     return 0;
-// }
+    free(file_name);
+    return 0;
+}
+
+int copy_dir_indirect(int img, const uint32_t block, const size_t block_size, ssize_t* left_to_read, uint32_t* buf, void* dir_buf, fuse_fill_dir_t filler, int block_type) {
+    ssize_t bytes_read = read_block(img, block, block_size, buf);
+    if (bytes_read < (ssize_t) block_size) {
+        return -errno;
+    }
+    void* indirect_block_buf = calloc(block_size, sizeof(char));
+    int retval = 0;
+    for (size_t i = 0; i < block_size / sizeof(uint32_t) && buf[i] != 0 && *left_to_read > 0; ++i) {
+        if (block_type == EXT2_IND_BLOCK) {
+            retval = copy_dir_direct(img, buf[i], block_size, left_to_read, indirect_block_buf, dir_buf, filler);
+        } else {
+            retval = copy_dir_indirect(img, buf[i], block_size, left_to_read, (uint32_t*) indirect_block_buf, dir_buf, filler, i - 1);
+        }
+        if (retval < 0) {
+            break;
+        }
+    }
+    free(indirect_block_buf);
+    return retval;
+}
+
+int copy_dir(int img, struct ext2_super_block* super_block, struct ext2_inode* inode, void* dir_buf, fuse_fill_dir_t filler) {
+    size_t block_size = 1024 << super_block->s_log_block_size;
+    ssize_t left_to_copy = inode->i_size;
+    void* buf = calloc(block_size, sizeof(char));
+    int retval = 0;
+    for (size_t i = 0; retval >= 0 && i < EXT2_N_BLOCKS && inode->i_block[i] != 0 && left_to_copy > 0; ++i) {
+        if (i < EXT2_NDIR_BLOCKS) {
+            retval = copy_dir_direct(img, inode->i_block[i], block_size, &left_to_copy, buf, dir_buf, filler);
+        } else if (i == EXT2_IND_BLOCK) {
+            retval = copy_dir_indirect(img, inode->i_block[i], block_size, &left_to_copy, (uint32_t*) buf, dir_buf, filler, i);
+        }
+    }
+    free(buf);
+    return retval;
+}
+
+int dump_dir(int img, const char* path, void* dir_buf, fuse_fill_dir_t filler) {
+    // read super_block
+    struct ext2_super_block super_block;
+    ssize_t bytes_read = read_super_block(img, &super_block);
+    if (bytes_read < 0) {
+        return -errno;
+    }
+
+    // find inode
+    int inode_nr = get_inode(img, path, &super_block);
+    if (inode_nr < 0) {
+        return inode_nr;
+    }
+
+    // read block group
+    struct ext2_group_desc block_group;
+    bytes_read = read_block_group(img, inode_nr, &super_block, &block_group);
+    if (bytes_read < 0) {
+        return bytes_read;
+    }
+
+    // read inode
+    struct ext2_inode inode;
+    bytes_read = read_inode(img, inode_nr, &super_block, &block_group, &inode);
+    if (bytes_read < 0) {
+        return bytes_read;
+    }
+
+    // copy all blocks
+    int retval = copy_dir(img, &super_block, &inode, dir_buf, filler);
+    if (retval < 0) {
+        return retval;
+    }
+
+    return 0;
+}
 
 static int ext2fuse_write(const char* path, const char* buf, size_t size, off_t off, struct fuse_file_info* ffi) {
     (void) path;
@@ -341,12 +426,26 @@ static int ext2fuse_getattr(const char* path, struct stat* stat, struct fuse_fil
     return 0;
 }
 
-// static int ext2fs_readdir(const char* path, void* dir_buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* ffi, enum fuse_readdir_flags frf) {
-//     if (is_writable(ffi)) {
-//         return -EROFS;
-//     }
-//     return dump_dir(ext2fuse_img, path, dir_buf, filler);
-// }
+static int ext2fuse_opendir(const char* path, struct fuse_file_info* ffi) {
+    (void) ffi;
+    struct ext2_super_block super_block;
+    ssize_t bytes_read = read_super_block(ext2fuse_img, &super_block);
+    if (bytes_read < 0) {
+        return -errno;
+    }
+    int inode_nr = get_inode(ext2fuse_img, path, &super_block);
+    if (inode_nr < 0) {
+        return -ENOENT;
+    }
+    return 0;
+}
+
+static int ext2fuse_readdir(const char* path, void* dir_buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* ffi, enum fuse_readdir_flags frf) {
+    (void) ffi;
+    (void) offset;
+    (void) frf;
+    return dump_dir(ext2fuse_img, path, dir_buf, filler);
+}
 
 static int ext2fuse_open(const char* path, struct fuse_file_info* ffi) {
     if (is_writable(ffi)) {
@@ -393,7 +492,8 @@ static const struct fuse_operations ext2_ops = {
     .mkdir = ext2fuse_mkdir,
     .mknod = ext2fuse_mknod,
     .getattr = ext2fuse_getattr,
-    // .readdir = ext2fuse_readdir,
+    .opendir = ext2fuse_opendir,
+    .readdir = ext2fuse_readdir,
     .open = ext2fuse_open,
     .read = ext2fuse_read,
 };
