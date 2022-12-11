@@ -129,13 +129,13 @@ func (s *Server) ParallelHash(ctx context.Context, req *parhashpb.ParHashReq) (r
 			s.curBackend = (s.curBackend + 1) % countBackends
 			s.mutex.Unlock()
 
-			resp, err = clients[curBackend].Hash(ctx, &hashpb.HashReq{Data: cur_data})
+			backendResp, err := clients[curBackend].Hash(ctx, &hashpb.HashReq{Data: cur_data})
 			if err != nil {
 				return err
 			}
 
 			s.mutex.Lock()
-			hashes[cur_i] = resp.Hash
+			hashes[cur_i] = backendResp.Hash
 			s.mutex.Unlock()
 
 			return nil
