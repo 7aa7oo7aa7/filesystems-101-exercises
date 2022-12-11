@@ -2,7 +2,6 @@ package parhash
 
 import (
 	"context"
-	"hash"
 	"log"
 	"net"
 	"sync"
@@ -133,7 +132,10 @@ func (s *Server) ParallelHash(ctx context.Context, req *parhashpb.ParHashReq) (r
 				return err
 			}
 
-			hashes[cur_i] = hash.Hash
+			s.mutex.Lock()
+			hashes[cur_i] = resp.Hash
+			s.mutex.Unlock()
+
 			return nil
 		})
 	}
