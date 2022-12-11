@@ -79,7 +79,7 @@ func New(conf Config) *Server {
 	return &Server{
 		conf: conf,
 		sem:  semaphore.NewWeighted(int64(conf.Concurrency)),
-		nr_nr_requests: prometheus.NewCouter(prometheus.CounterOpts{
+		nr_nr_requests: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "parhash",
 			Name:      "nr_nr_requests",
 		}),
