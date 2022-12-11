@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "11-grpc/pkg/gen/parhashsvc;parhashsvc";
+
+package parhashsvc;
+
+service ParallelHashSvc {
+	rpc ParallelHash(ParHashReq) returns (ParHashResp);
+}
+
+message ParHashReq {
+	repeated bytes data = 1;
+}
+
+message ParHashResp {
+	repeated bytes hashes = 1;
+}

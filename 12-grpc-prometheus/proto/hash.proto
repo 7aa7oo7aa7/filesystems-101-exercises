@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package = "11-grpc/pkg/gen/hashsvc;hashsvc";
+
+package hashsvc;
+
+service HashSvc {
+	rpc Hash(HashReq) returns (HashResp);
+}
+
+message HashReq {
+	bytes data = 1;
+}
+
+message HashResp {
+	bytes hash = 1;
+}
