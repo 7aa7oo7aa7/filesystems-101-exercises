@@ -105,14 +105,16 @@ func (s *Server) ParallelHash(ctx context.Context, req *parhashpb.ParHashReq) (r
 
 	countBackends := len(s.conf.BackendAddrs)
 	clients := make([]hashpb.HashSvcClient, countBackends)
+	conns := make([]*grpc.ClientConn, countBackends)
 	wg := workgroup.New(workgroup.Config{Sem: s.sem})
 
 	for i, addr := range s.conf.BackendAddrs {
-		conn, err := grpc.Dial(addr, grpc.WithInsecure())
+		conns[i], err = grpc.Dial(addr, grpc.WithInsecure())
 		if err != nil {
-			return err
+			log.Fatalf("Cannot connect: %v", err)
 		}
-		clients[i] = hashpb.NewHashSvcClient(conn)
+		defer conns[i].Close()
+		clients[i] = hashpb.NewHashSvcClient(conns[i])
 	}
 
 	hashes := make([][]byte, len(req.Data))
