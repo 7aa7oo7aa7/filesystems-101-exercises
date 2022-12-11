@@ -50,7 +50,7 @@ type Config struct {
 //
 // The server must report the following performance counters to Prometheus:
 //
-//  1. nr_nr_requests: a counter that is incremented every time a call
+//  1. nr_requests: a counter that is incremented every time a call
 //     is made to ParallelHash(),
 //
 //  2. subquery_durations: a histogram that tracks durations of calls
@@ -71,7 +71,7 @@ type Server struct {
 	mutex      sync.Mutex
 	curBackend int
 
-	nr_nr_requests     prometheus.Counter
+	nr_requests        prometheus.Counter
 	subquery_durations *prometheus.HistogramVec
 }
 
@@ -79,9 +79,9 @@ func New(conf Config) *Server {
 	return &Server{
 		conf: conf,
 		sem:  semaphore.NewWeighted(int64(conf.Concurrency)),
-		nr_nr_requests: prometheus.NewCounter(prometheus.CounterOpts{
+		nr_requests: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: "parhash",
-			Name:      "nr_nr_requests",
+			Name:      "nr_requests",
 		}),
 		subquery_durations: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: "parhash",
@@ -101,7 +101,7 @@ func (s *Server) Start(ctx context.Context) (err error) {
 
 	ctx, s.stop = context.WithCancel(ctx)
 
-	s.conf.Prom.MustRegister(s.nr_nr_requests)
+	s.conf.Prom.MustRegister(s.nr_requests)
 	s.conf.Prom.MustRegister(s.subquery_durations)
 
 	srv := grpc.NewServer()
@@ -134,7 +134,7 @@ func (s *Server) Stop() {
 
 func (s *Server) ParallelHash(ctx context.Context, req *parhashpb.ParHashReq) (resp *parhashpb.ParHashResp, err error) {
 	defer func() { err = errors.Wrapf(err, "ParallelHash()") }()
-	s.nr_nr_requests.Inc()
+	s.nr_requests.Inc()
 
 	countBackends := len(s.conf.BackendAddrs)
 	clients := make([]hashpb.HashSvcClient, countBackends)
